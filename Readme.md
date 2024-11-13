@@ -30,6 +30,10 @@ Instalar apache es muy sencillo lanzamos el siguiente comando:
 sudo apt install apache2 -y
 ```
 
+Podemos configurar apache2 de manera personalizada con multiples funciones desde sus archivos de configurción.
+Por prediterminado lo podemos encontrar en el **puerto 80** una vez a sido instalado, en principio solo lo intalaremos
+por ahora más adelante aplicaremos más configuraciónes.
+
 #### Comandos para gestionar el servicio de apache
 ```shell
 sudo systemctl start apache2 # Incia
