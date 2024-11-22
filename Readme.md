@@ -104,3 +104,112 @@ funcionó podremos acceder desde `http://IP/info.php` y ver la información del 
 Recuerda reiniciar el servicio para aplicar los cambios.
 
 ### Y con esto ya tendríamos instalado LAMP al completo y con una breve configuración básica
+
+
+# Funcionalidades Extras
+## Instalación de phpMyAdmin
+**phpMyAdmin** es un gestor de la base de datos MySQL, pero, con un entorno gráfico desde la web, esto nos permite una 
+gestión como y visual para gestionar la base de datos por eso puede ser util instalarlo, para ello lo instalamos con:
+
+````shell
+sudo apt install phpmyadmin php-mbstring php-zip php-gd php-json php-curl -y
+````
+
+Con este comando instalamos todos los servicios para poder tener el pack de funcionalidad completa, pero si queremos
+configurarlo en un script tendremos que utilizar `debconf-set-selections`, con esto podemos configurar todo lo que 
+necesita phpMyAdmin, y variables de entorno para las contraseñas.
+
+## Instalación de Adminer
+Una alternativa a phpMyAdmin, la ventaja es que se maneja en un solo `.php`, su instalación es mucho más sencilla:
+
+`````shell
+# Creamos el directorio en el que instalar adminer
+sudo mkdir -p /var/www/html/adminer
+
+#Instalamos le paquete con wget
+sudo wget https://github.com/vrana/adminer/releases/download/v4.8.1/adminer-4.8.1-mysql.php -P /var/www/html/adminer
+`````
+
+## Instalación de GoAccess
+Este es muy util para ver los registros de apache junto con `.htacces` y poder controlarlo, por lo tanto, vamos a 
+configurarlos, lo instalamos con:
+
+````shell
+# Instalación de GoAccess
+sudo apt install goaccess -y
+
+#Parseamos el fichero de log de apache para que trabaje desde GoAccess
+sudo goaccess /var/log/apache2/access.log -c
+
+#Habilitamos el puerto 7890 para el html en tiempo real
+sudo ufw allow 7890
+
+# Creamos un html de muestro en tiempo real
+sudo goaccess /var/log/apache2/access.log -o /var/www/html/report.html --log-format=COMBINED --real-time-html
+
+# Configuración de directorio stats
+mkdir -p /var/www/html/stats
+
+# Lanzamiento del proceso en segundo plano con --daemonize
+goaccess /var/log/apache2/access.log -o /var/www/html/stats/index.html --log-format=COMBINED --daemonize
+
+# Creación de archivo de usuario y contraseña con variables de entrono
+sudo htpasswd -bc /etc/apache2/.htpasswd $STATS_USERNAME $STATS_PASSWORD
+````
+
+Lo instalamos pasamos el fichero de registros de apache para que trabaje con él, habilitamos el puerto que utiliza 
+GoAccess para generar el html en tiempo real, lo lanzamos en segundo plano y creamos el usuario par a utilizar con sus 
+respectivas variables de entorno.
+
+Tenemos que editar el fichero de configuración de `apache2`, nos debe quedar algo así:
+
+````shell
+<VirtualHost *:80>
+        DocumentRoot /var/www/html
+
+        <Directory "/var/www/html/stats">
+          AuthType Basic
+          AuthName "Acceso restringido"
+          AuthBasicProvider file
+          AuthUserFile "/etc/apache2/.htpasswd"
+          Require valid-user
+        </Directory>
+
+        ErrorLog /var/log/apache2/error.log
+</VirtualHost>
+EOL'
+````
+Y reiniciamos el servicio para aplicar la configuración.
+
+## Configuración de .htaccess
+Reutilizaremos parte de la configuración de `GoAccess`,
+````shell
+# Creamos el archivo de usuario y contraseñas reutilizamos las variables de goacces o creamos unas nuevas
+sudo htpasswd -c /etc/apache2/.htpasswd usuario
+sudo htpasswd -bc /etc/apache2/.htpasswd $STATS_USERNAME $STATS_PASSWORD
+
+sudo cp ./htaccess/.htaccess /var/www/html/stats/
+
+echo "Modificando la configuración de Apache para restringir acceso a /var/www/html/stats"
+sudo bash -c 'cat <<EOL >> /etc/apache2/sites-available/000-default.conf
+
+<VirtualHost *:80>
+    DocumentRoot /var/www/html
+
+    # Configuración de GoAccess (ya configurado previamente en /stats)
+    <Directory "/var/www/html/stats">
+        AllowOverride All
+        AuthType Basic
+        AuthName "Acceso restringido"
+        AuthBasicProvider file
+        AuthUserFile "/etc/apache2/.htpasswd"
+        Require valid-user
+    </Directory>
+
+        ErrorLog /var/log/apache2/error.log
+</VirtualHost>
+EOL'
+
+````
+
+Y ya reiniciamos el servicio con, esto ya estaría finalizado todo.

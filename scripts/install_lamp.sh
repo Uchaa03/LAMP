@@ -2,7 +2,7 @@
 # La utilización de barras invertidas es para mejorar la legibilidad del script
 
 # Importación de variables de entorno recordatorio de que se tiene que generar el propio
-source .env
+source .env.local
 
 # Actualización de paquetes del sistema
 sudo apt update && \
